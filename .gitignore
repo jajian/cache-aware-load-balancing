@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Generated outputs
+outputs/
+results/
+plots/
+figures/
+*.csv
+*.png
+*.jpg
+*.jpeg
+*.pdf

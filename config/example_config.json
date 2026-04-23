@@ -1,0 +1,19 @@
+{
+  "output_dir": "example_output",
+  "num_tasks": 400,
+  "num_task_types": 200,
+  "server_counts": [4, 8],
+  "arrival_modes": ["all_at_zero", "poisson"],
+  "arrival_rate": 3.0,
+  "workload_profiles": [
+    "mostly_unique",
+    "moderate_repetition",
+    "highly_repetitive"
+  ],
+  "cache_hit_service_time": 0.4,
+  "cache_miss_service_time": 1.0,
+  "default_hybrid_probability": 0.5,
+  "hybrid_probabilities": [0.0, 0.25, 0.5, 0.75, 1.0],
+  "num_trials": 5,
+  "random_seed": 262
+}
