@@ -71,8 +71,14 @@ class HashBasedLoadAwareStrategy(RoutingStrategy):
             key=lambda server: server_score(task.task_type, server.server_id),
             reverse=True,
         )
-        first = scored_servers[0]
-        second = scored_servers[1] if len(scored_servers) > 1 else scored_servers[0]
+        hypothetical_loads = [scored_servers[i].queued_work(task.arrival_time) for i in range(len(scored_servers))]
+        total_load = sum(hypothetical_loads)
+        start = 0
+        while start < len(hypothetical_loads) - 1 and hypothetical_loads[start] > 0.3 * total_load:
+            start += 1
+        
+        first = scored_servers[start]
+        second = scored_servers[start + 1] if start + 1 < len(scored_servers) else scored_servers[start]
         return _choose_lower_load(first, second, task.arrival_time, rng)
 
 
