@@ -156,17 +156,20 @@ def run_experiments(config: dict) -> None:
             ]
         )
     ].copy()
-    hybrid_aggregated = aggregated_results[
-        aggregated_results["strategy_name"].str.startswith("hybrid_p_")
+    hybrid_raw = raw_results[
+        raw_results["strategy_name"].str.startswith("hybrid_p_")
     ].copy()
 
     raw_results.to_csv(csv_dir / "raw_results.csv", index=False)
     aggregated_results.to_csv(csv_dir / "aggregated_results.csv", index=False)
     baseline_aggregated.to_csv(csv_dir / "baseline_summary.csv", index=False)
-    hybrid_aggregated.to_csv(csv_dir / "hybrid_summary.csv", index=False)
+    hybrid_raw.groupby(
+        ["strategy_name", "strategy_label", "workload_name", "arrival_mode", "server_count", "repetition_label", "hybrid_probability"], 
+        as_index=False
+    )[["makespan", "average_completion_time", "cache_hit_rate"]].mean().to_csv(csv_dir / "hybrid_summary.csv", index=False)
 
     plot_repetition_sweeps(baseline_aggregated, plots_dir)
-    plot_hybrid_sweeps(hybrid_aggregated, plots_dir)
+    plot_hybrid_sweeps(hybrid_raw, plots_dir)
 
     print(f"Wrote CSV files to: {csv_dir}")
     print(f"Wrote plot files to: {plots_dir}")

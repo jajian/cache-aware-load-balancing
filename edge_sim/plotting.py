@@ -52,9 +52,9 @@ def plot_repetition_sweeps(aggregated: pd.DataFrame, output_dir: Path) -> None:
             plt.close()
 
 
-def plot_hybrid_sweeps(aggregated_hybrid: pd.DataFrame, output_dir: Path) -> None:
-    """Create plots showing hybrid performance as p changes."""
-    if aggregated_hybrid.empty:
+def plot_hybrid_sweeps(raw_hybrid: pd.DataFrame, output_dir: Path) -> None:
+    """Create plots showing hybrid performance as p changes. Completion time uses boxplots."""
+    if raw_hybrid.empty:
         return
 
     hybrid_metrics = {
@@ -63,19 +63,29 @@ def plot_hybrid_sweeps(aggregated_hybrid: pd.DataFrame, output_dir: Path) -> Non
         "cache_hit_rate": "Cache Hit Rate",
     }
 
-    for (arrival_mode, server_count, repetition_label), subset in aggregated_hybrid.groupby(
+    for (arrival_mode, server_count, repetition_label), subset in raw_hybrid.groupby(
         ["arrival_mode", "server_count", "repetition_label"]
     ):
-        subset = subset.sort_values("hybrid_probability")
         for metric, y_label in hybrid_metrics.items():
             plt.figure(figsize=(8, 5))
-            plt.plot(
-                subset["hybrid_probability"],
-                subset[metric],
-                marker="o",
-                label=f"{repetition_label}",
-            )
-            plt.xlabel("Hybrid Probability p")
+            
+            if metric == "average_completion_time":
+                # Create boxplot for each unique p
+                probs = sorted(subset["hybrid_probability"].unique())
+                data_to_plot = [subset[subset["hybrid_probability"] == p][metric].values for p in probs]
+                plt.boxplot(data_to_plot, labels=[f"{p:.2f}" for p in probs], showmeans=False)
+                plt.xlabel("Hybrid Probability p")
+            else:
+                # Use line plot of means for other metrics
+                means = subset.groupby("hybrid_probability")[metric].mean().reset_index().sort_values("hybrid_probability")
+                plt.plot(
+                    means["hybrid_probability"],
+                    means[metric],
+                    marker="o",
+                    label=f"{repetition_label}",
+                )
+                plt.xlabel("Hybrid Probability p")
+
             plt.ylabel(y_label)
             plt.title(
                 f"{y_label} vs p ({arrival_mode}, m={server_count}, {repetition_label})"
