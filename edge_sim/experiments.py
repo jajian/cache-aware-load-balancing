@@ -13,6 +13,7 @@ from edge_sim.routing import (
     HashBasedLoadAwareStrategy,
     HybridEpsilonStrategy,
     PowerOfTwoChoicesStrategy,
+    RandomLoadForwarding,
 )
 from edge_sim.simulator import result_to_flat_dict, simulate
 from edge_sim.workload import WorkloadProfile, generate_workload, get_profiles
@@ -103,6 +104,14 @@ def run_experiments(config: dict) -> None:
                             default_hybrid_probability,
                             f"hybrid(p={default_hybrid_probability:.2f})",
                         ),
+                        (
+                            RandomLoadForwarding(
+                                config["cache_miss_service_time"],
+                                config["cache_hit_service_time"],
+                            ),
+                            0.0,  # placeholder probability
+                            "random_load_forwarding",
+                        ),
                     ]
 
                     for strategy, hybrid_probability, strategy_label in base_strategies:
@@ -153,6 +162,7 @@ def run_experiments(config: dict) -> None:
                 "power_of_two",
                 "hash_load_aware",
                 f"hybrid(p={default_hybrid_probability:.2f})",
+                "random_load_forwarding",
             ]
         )
     ].copy()

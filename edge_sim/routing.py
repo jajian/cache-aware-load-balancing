@@ -102,3 +102,71 @@ class HybridEpsilonStrategy(RoutingStrategy):
         if rng.random() < self.epsilon_hash_probability:
             return self.hash_based.select_server(task, servers, rng)
         return self.power_of_two.select_server(task, servers, rng)
+
+
+@dataclass
+class RandomLoadForwarding(RoutingStrategy):
+    """Hash-based forwarding with popularity-aware noisy load checks."""
+
+    cache_miss_time: float
+    cache_hit_time: float
+    last_arrival_times: dict[str, float] = field(default_factory=dict, init=False)
+    iats: dict[str, float] = field(default_factory=dict, init=False)
+
+    def __init__(self, cache_miss_time: float, cache_hit_time: float) -> None:
+        super().__init__(name="random_load_forwarding")
+        self.cache_miss_time = cache_miss_time
+        self.cache_hit_time = cache_hit_time
+        self.last_arrival_times = {}
+        self.iats = {}
+
+    def select_server(
+        self, task: Task, servers: Sequence[Server], rng: np.random.Generator
+    ) -> Server:
+        current_time = task.arrival_time
+        task_type = task.task_type
+
+        # 5. Update IAT
+        if task_type in self.last_arrival_times:
+            delta = current_time - self.last_arrival_times[task_type]
+            iat = delta / 0.2
+            self.iats[task_type] = iat
+        else:
+            self.iats[task_type] = 1000.0  # Large initial value
+        self.last_arrival_times[task_type] = current_time
+
+        # 6. Popularity check (top 20% = smallest 20% IATs)
+        iat_values = list(self.iats.values())
+        is_popular = False
+        avg_iat = 1000.0
+        if iat_values:
+            # "top p%" of popularity usually means lowest inter-arrival times
+            threshold_iat = np.percentile(iat_values, 20)
+            is_popular = self.iats[task_type] <= threshold_iat
+            avg_iat = np.mean(iat_values)
+        
+        # 7. Lambda calculation
+        lambda_val = 1.0 / avg_iat if avg_iat > 0 else 1.0
+
+        # 2. Score and sort servers (start with largest score)
+        scored_servers = sorted(
+            servers,
+            key=lambda s: server_score(task_type, s.server_id),
+            reverse=True,
+        )
+
+        # 4. Threshold calculation
+        threshold = min(self.cache_miss_time * 0.1 / self.cache_hit_time, 6.0)
+
+        for server in scored_servers:
+            load = server.queued_work(current_time)
+            # 3. Anticipated load with Gaussian noise
+            ant_load = load
+            if is_popular:
+                ant_load += rng.normal(lambda_val, 0.1)
+            
+            if ant_load < threshold:
+                return server
+        
+        # 4. Fallback: least loaded
+        return min(servers, key=lambda s: s.queued_work(current_time))
